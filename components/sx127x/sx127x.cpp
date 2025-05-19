@@ -156,10 +156,12 @@ void SX127x::configure_fsk_ook_() {
     this->write_register_(REG_PACKET_CONFIG_1, crc_mode);
     this->write_register_(REG_PACKET_CONFIG_2, PACKET_MODE);
     this->write_register_(REG_PAYLOAD_LENGTH_LSB, this->payload_length_);
+    this->write_register_(REG_DIO_MAPPING1, DIO0_MAPPING_00);
   } else {
     this->write_register_(REG_PACKET_CONFIG_2, CONTINUOUS_MODE);
+    this->write_register_(REG_DIO_MAPPING1, (1 << 2));
+    ESP_LOGI(TAG, "Entrou em FSK contínuo: DIO2 mapeado para Data (raw bits)");
   }
-  this->write_register_(REG_DIO_MAPPING1, DIO0_MAPPING_00);
 
   // config bit synchronizer
   uint8_t polarity = (this->preamble_polarity_ == 0xAA) ? PREAMBLE_AA : PREAMBLE_55;
@@ -308,10 +310,16 @@ void SX127x::loop() {
         }
       }
     }
-  } else if (this->payload_length_ > 0 && this->dio0_pin_->digital_read()) {
-    std::vector<uint8_t> packet(this->payload_length_);
-    this->read_fifo_(packet);
-    this->call_listeners_(packet, 0.0f, 0.0f);
+  } else if (this->modulation_ == MOD_FSK && this->payload_length_ == 0) {
+    uint8_t n = this->read_register_(REG_RX_NB_BYTES);
+    if (n > 0) {
+      std::vector<uint8_t> pkt(n);
+      this->read_fifo_(pkt);
+      for (auto b : pkt) {
+        ESP_LOGI(TAG, "Raw FIFO byte (cont FSK): 0x%02X", b);
+      }
+    }
+    return;
   }
 }
 

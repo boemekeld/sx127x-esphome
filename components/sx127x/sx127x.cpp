@@ -311,7 +311,7 @@ void SX127x::loop() {
       }
     }
   } else if (this->modulation_ == MOD_FSK && this->payload_length_ == 0) {
-    uint8_t n = this->read_register_(REG_RX_NB_BYTES);
+    uint8_t n = this->read_register_(REG_NB_RX_BYTES);
     if (n > 0) {
       std::vector<uint8_t> pkt(n);
       this->read_fifo_(pkt);
